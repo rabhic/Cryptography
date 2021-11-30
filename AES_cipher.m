@@ -13,38 +13,130 @@ plain_text =  getStateMatrix(plain_text);
 key = input('Enter key : ','s');
 key = getStateMatrix(key);
 
-% Creating all Sub Keys (key-0 to key-10)
+%Creating all Sub Keys (key-0 to key-10)
 sub_keys = subKeyGeneration(key);
 
-%Calling addRoundkey Function
-op_of_add_round_key = addRoundKey(plain_text,sub_keys);
+%Calling aes_encryption function to get cipher text from plain text
+cipher_text = aes_encryption(plain_text,sub_keys);
+disp(cipher_text);
 
 
-%Substitution Operation
-op_of_Substitution_operation = substitutionOperation(op_of_add_round_key);
-
-%Shift Operation
-op_of_Shift_operation = shiftOperation(op_of_Substitution_operation);
-
-%Mix Column Operation
-op_of_Mix_Column_operation = mixOperation(op_of_Shift_operation);
-disp(op_of_Mix_Column_operation);
-
-
-
-
-
+%Calling Decryption Function to get plain text from cipher text;
+Decrypted_text = aes_decryption(cipher_text,sub_keys);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %ALL FUNCTIONS
 
+function decrypted_text = aes_decryption(cipher_text,sub_keys)
+    disp( cipher_text);
+    disp(class(cipher_text));
+    decrypted_text = 0;
+
+end
+
+
+function cipher_text = aes_encryption(plain_text,sub_keys)
+
+    %Calling addRoundkey Function
+    op_of_add_round_key = addRoundKey(plain_text,sub_keys);
+
+k = 5;
+for i=1:10
+    
+    if i<10
+        %Substitution Operation
+        op_of_Substitution_operation = substitutionOperation(op_of_add_round_key);
+
+        %Shift Operation
+        op_of_Shift_operation = shiftOperation(op_of_Substitution_operation);
+
+        %Mix Column Operation
+        op_of_Mix_Column_operation = mixOperation(op_of_Shift_operation);
+
+        %Add Round Key Operation
+        op_of_Add_Round_key = AddRoundKey(op_of_Mix_Column_operation,sub_keys(:,k:k+3));
+        k = k+4;
+
+        op_of_add_round_key = op_of_Add_Round_key;
+    else
+        %Substitution Operation
+        op_of_Substitution_operation = substitutionOperation(op_of_add_round_key);
+
+        %Shift Operation
+        op_of_Shift_operation = shiftOperation(op_of_Substitution_operation);
+
+        %Add Round Key Operation
+        op_of_Add_Round_key = AddRoundKey(op_of_Shift_operation,sub_keys(:,41:44));
+
+        cipher_text = reshape(op_of_Add_Round_key,1,16);
+    end
+    
+end
+
+   cipher_text = replace (string( strjoin(cipher_text)),' ',''); 
+   
+end
+
+
+function state_matrixx = AddRoundKey(state_matrix,roundkey)
+
+    state_matrixx=string(zeros(4,4));
+    for i=1:4
+        for j=1:4
+            a=hexToBinaryVector( state_matrix(i,j),8);
+            b=hexToBinaryVector( roundkey(i,j),8);
+            xor_result = xor(a,b);
+            state_matrixx(i,j) = string( binaryVectorToHex(xor_result));
+        end
+    end
+
+end
+
+
 function state_matrixx = mixOperation(state_matrix)
-    constant_matrix = ["02" "03" "01" "01";...
+   constant_matrix = ["02" "03" "01" "01";...
         "01" "02" "03" "01";...
         "01" "01" "02" "03";...
-        "03" "01" "01" "02"];
-    state_matrixx = constant_matrix;
+        "03" "01" "01" "02"];  
+state_matrixx = string(zeros(4,4));
+    
+for i=1:4
+    for j=1:4
+        a =hexToBinaryVector(constant_matrix(i,1),16);
+        b =hexToBinaryVector(state_matrix(1,j),16);
+        c =hexToBinaryVector(constant_matrix(i,2),16);
+        d =hexToBinaryVector(state_matrix(2,j),16);
+        e =hexToBinaryVector(constant_matrix(i,3),16);
+        f =hexToBinaryVector(state_matrix(3,j),16);
+        g =hexToBinaryVector(constant_matrix(i,4),16);
+        h =hexToBinaryVector(state_matrix(4,j),16);
 
+
+        sum = conv(a,b)+conv(c,d)+conv(e,f)+conv(g,h);
+
+
+        for k=1:31
+            if mod(sum(1,k),2)==0
+                sum(1,k) = 0;
+            else
+                sum(1,k) = 1;
+            end
+        end
+
+        irreducible_polynomial = [1 0 0 0 1 1 0 1 1];
+        [~,r] = deconv(sum,irreducible_polynomial);
+
+        result = r(1,24:end);
+
+        for m =1:8
+            if result(1,m)<0
+                result(1,m)=1;
+            end
+        end
+
+        state_matrixx(i,j) = string( binaryVectorToHex(result));
+    end
+end
 end
 
 
